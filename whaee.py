@@ -1,5 +1,5 @@
-Exp 1 
-To collect, preprocess, integrate, and transform healthcare data related to a specific disease for further analysis.
+# Exp 1 
+#To collect, preprocess, integrate, and transform healthcare data related to a specific disease for further analysis.
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 df = pd.DataFrame({
     "Age": [25, 45, 60, 35, 70, 50, 40, 65],
     "Gender": ["Male", "Female", "Female", "Male", "Female", "Male", "Female", "Male"],
-    "Medical Condition": ["Diabetes", "Diabetes", "Asthma", "Diabetes", "Diabetes", "Asthma”,  "Diabetes", "Diabetes"],
+    "Medical Condition": ["Diabetes", "Diabetes", "Asthma", "Diabetes", "Diabetes", "Asthma", "Diabetes", "Diabetes"],
     "Billing Amount": [2000, 5000, 3000, 4000, 7000, 2500, 4500, 6000],
     "Test Results": ["Normal", "Abnormal", "Normal", "Abnormal", "Inconclusive", "Normal", "Abnormal", "Inconclusive"]
 })
@@ -92,7 +92,7 @@ df = pd.DataFrame({
     "Gender": ["Male","Female"] * 12
 })
 
-      sns.histplot(data=df, x="Age", kde=True)
+sns.histplot(data=df, x="Age", kde=True)
 plt.show()
 
 sns.boxplot(data=df, x="Billing Amount")
@@ -132,6 +132,9 @@ from google.colab import files
 uploaded = files.upload()
 img = cv2.imdecode(np.frombuffer(next(iter(uploaded.values())),
                     np.uint8), cv2.IMREAD_COLOR)
+for vs code
+image_path = "your_image.jpg" 
+img = cv2.imread(image_path, cv2.IMREAD_COLOR)
 
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -305,21 +308,35 @@ To study and implement Explainable AI (XAI) in healthcare for interpreting machi
 !pip -q install shap
 
 import pandas as pd
+import numpy as np
 import shap
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
-from google.colab import files
 
-uploaded = files.upload()
-df = pd.read_csv(next(iter(uploaded)))
-df.columns = df.columns.str.strip()
+np.random.seed(42)
+n = 500
 
-target = "Life expectancy"
-df = df.select_dtypes(include="number").dropna()
-X = df.drop(columns=[target])
-y = df[target]
+df = pd.DataFrame({
+    "Age": np.random.randint(18, 85, n),
+    "BMI": np.random.uniform(18, 40, n),
+    "Blood_Pressure": np.random.randint(90, 180, n),
+    "Cholesterol": np.random.randint(130, 280, n),
+    "Schooling": np.random.uniform(5, 20, n)
+})
+
+df["Life expectancy"] = (
+    85 - 0.15 * df["Age"]
+    - 0.08 * df["BMI"]
+    - 0.05 * df["Blood_Pressure"]
+    - 0.02 * df["Cholesterol"]
+    + 0.3 * df["Schooling"]
+    + np.random.normal(0, 2, n)
+)
+
+X = df.drop("Life expectancy", axis=1)
+y = df["Life expectancy"]
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
@@ -328,15 +345,27 @@ X_train, X_test, y_train, y_test = train_test_split(
 model = RandomForestRegressor(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-pred = model.predict(X_test)
-print("R2 Score:", r2_score(y_test, pred))
+print("R2 Score:", round(r2_score(y_test, model.predict(X_test)), 3))
 
 explainer = shap.TreeExplainer(model)
-values = explainer(X_test.sample(min(100, len(X_test)), random_state=42))
+sample = X_test.sample(100, random_state=42)
+shap_values = explainer(sample)
 
-shap.summary_plot(values, X_test.sample(
-    min(100, len(X_test)), random_state=42
-))
+shap.summary_plot(shap_values, sample)
+
+importance = pd.DataFrame({
+    "Feature": X.columns,
+    "Importance": np.abs(shap_values.values).mean(axis=0)
+}).sort_values("Importance", ascending=False)
+
+print(importance)
+
+plt.barh(importance["Feature"], importance["Importance"])
+plt.xlabel("Mean Absolute SHAP Value")
+plt.title("Healthcare Feature Importance")
+plt.show()
+
+shap.plots.waterfall(shap_values[0])
 
 
 
